@@ -21,7 +21,7 @@ Projekt automatyzacji domowego laboratorium opartego na systemie **Proxmox** ora
    git clone git@github.com:TWOJ_NICK/devops-lab.git
    cd devops-lab
 
-Przygotowanie środowiska:
+2. **Przygotowanie środowiska:**
     Bash
 
     python3 -m venv venv
@@ -37,13 +37,13 @@ Przygotowanie środowiska:
     PM_PASS=twoje_haslo
     SRV_MAC=AA:BB:CC:DD:EE:FF
 
-🕹️ Użycie
+🕹️ **Użycie**
 
     Włączanie serwera: python3 wol_start.py
 
     Wyłączanie serwera: python3 srv_off.py
 
-📅 Plan rozwoju (Roadmap)
+📅 **Plan rozwoju (Roadmap)**
 
     [ ] Implementacja automatycznego sprawdzania statusu (ping) po wysłaniu WoL.
 
