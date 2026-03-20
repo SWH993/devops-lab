@@ -38,7 +38,7 @@ Projekt automatyzacji domowego laboratorium opartego na systemie **Proxmox** ora
 
 3. **Uprawnienia systemowe:**
     Niektóre moduły (np. AuditModule) wymagają uprawnień administratora do odczytu/zapisu plików systemowych:
-    sudo venv/bin/python AuditModule.py
+        sudo venv/bin/python AuditModule.py
 
 🕹️ **Użycie**
     * Włączanie serwera: python3 wol_start.py
