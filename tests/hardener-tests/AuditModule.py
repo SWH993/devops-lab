@@ -12,7 +12,7 @@ class SSHAuditor:
     def __init__(self):
         self.results: Dict[str, Union[str, int, bool]] = {}
 
-    def run_audit(self) => Dict[str, Union[str, int, bool]]:
+    def run_audit(self) -> Dict[str, Union[str, int, bool]]:
         """uruchamia wszytskie testy audytowe"""
         if not os.path.exists(self.CONFIG_PATH):
             return {"error": "Brak pliku konfiguracji SSH"}
