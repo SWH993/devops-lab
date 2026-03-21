@@ -27,14 +27,42 @@ class Monitor:
         print(f"RAM: {ram}%")
         print(f"DISC: {disc}%")
 
-        return {"cpu": cpu, "ram": ram, "disk": disc}
+        return {"cpu": cpu, "ram": ram, "disc": disc}
     
     def send_to_discord(self, stats: dict):
         load_dotenv()
         url = os.getenv('DISCORD_WEBHOOK_URL')
 
+        if not url:
+            print("Błąd: Brak Webhook URL w pliku .env")
+            return
+
         payload = {
-            "content": f"**Raport z Proxmox**\nCPU: {stats['cpu']}%\nRAM: {stats['ram']}%\nDisk: {stats['disk']}%"
+            "embeds": [{
+                "title": "🖥️ Statystyki Serwera HP - Proxmox",
+                "description": "Regularny raport stanu zasobów systemowych.",
+                "color": 3066993,
+                "fields": [
+                    {
+                        "name": "🔥 Procesor",
+                        "value": f"**{stats['cpu']}%**",
+                        "inline": True
+                    },
+                    {
+                        "name": "🧠 Pamięć RAM",
+                        "value": f"**{stats['ram']}%**",
+                        "inline": True
+                    },
+                    {
+                        "name": "💾 Dysk systemowy",
+                        "value": f"**{stats['disc']}%**",
+                        "inline": True
+                    }
+                ],
+                "footer": {
+                    "text": "Monitorowanie aktywne • Debian 13"
+                }
+            }]
         }
 
         message = requests.post(url, json=payload)
