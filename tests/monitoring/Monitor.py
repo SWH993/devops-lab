@@ -2,12 +2,13 @@ import psutil
 import os
 from dotenv import load_dotenv
 import requests
-from typing import Dict
+from typing import Dict, Optional
 
 class Monitor:
-    """Klasa wyciągająca dane o CPU, RAM i Dysku z urządzenia."""
+    """Klasa wyciągająca dane o CPU, RAM, Dysku i Baterii z urządzenia."""
     def __init__(self):
-            pass
+        load_dotenv()
+        self.webhook_url = os.getenv('DISCORD_WEBHOOK_URL')
 
     def get_cpu(self) -> float:
         return psutil.cpu_percent(interval=1)
@@ -17,17 +18,33 @@ class Monitor:
 
     def get_disc(self) -> float:
         return psutil.disk_usage('/').percent
+    
+    def get_battery(self) -> Dict[str, str]:
+        try:
+            # Ścieżki w Debianie/Proxmoxie dla laptopów
+            cap_path = "/sys/class/power_supply/BAT0/capacity"
+            stat_path = "/sys/class/power_supply/BAT0/status"
+
+            if not os.path.exists(cap_path):
+                cap_path = cap_path.replace("BAT0", "BAT1")
+                stat_path = stat_path.replace("BAT0", "BAT1")
+
+            with open(cap_path, 'r') as f:
+                capacity = f.read().strip()
+            with open(stat_path, 'r') as f:
+                status = f.read().strip()
+
+            return {"capacity": capacity, "status": status}
+        except FileNotFoundError:
+            return {"capacity": "N/A", "status": "Nie wykryto"}
 
     def get_stats(self):
         cpu = self.get_cpu()
         ram = self.get_ram()
         disc = self.get_disc()
+        bat = self.get_battery()
 
-        print(f"CPU: {cpu}%")
-        print(f"RAM: {ram}%")
-        print(f"DISC: {disc}%")
-
-        return {"cpu": cpu, "ram": ram, "disc": disc}
+        return {"cpu": cpu, "ram": ram, "disc": disc, "bat": bat}
     
     def send_to_discord(self, stats: dict):
         load_dotenv()
@@ -36,12 +53,16 @@ class Monitor:
         if not url:
             print("Błąd: Brak Webhook URL w pliku .env")
             return
+        
+        # Kolor zmienia się na czerwony, jeśli bateria < 20%
+        bat_val = stats['battery']['capacity']
+        color = 15158332 if bat_val != "N/A" and int(bat_val) < 20 else 3066993
 
         payload = {
             "embeds": [{
                 "title": "🖥️ Statystyki Serwera HP - Proxmox",
                 "description": "Regularny raport stanu zasobów systemowych.",
-                "color": 3066993,
+                "color": color,
                 "fields": [
                     {
                         "name": "🔥 Procesor",
@@ -57,7 +78,11 @@ class Monitor:
                         "name": "💾 Dysk systemowy",
                         "value": f"**{stats['disc']}%**",
                         "inline": True
-                    }
+                    },
+                    {
+                        "name": "⚡ Bateria", 
+                        "value": f"{stats['battery']['capacity']}% ({stats['battery']['status']})", 
+                        "inline": False}
                 ],
                 "footer": {
                     "text": "Monitorowanie aktywne • Debian 13"
@@ -65,12 +90,17 @@ class Monitor:
             }]
         }
 
-        message = requests.post(url, json=payload)
-
-        print(f"Status wysyłki: {message.status_code}")
+        try:
+            res = requests.post(self.webhook_url, json=payload)
+            print(f"Status wysyłki: {res.status_code}")
+        except Exception as e:
+            print(f"Błąd sieci: {e}")
     
 if __name__ == "__main__":
     app = Monitor()
     
-    message_to_discord = app.get_stats()
-    app.send_to_discord(message_to_discord)
+    import time
+    while True:
+        data = app.get_stats()
+        app.send_to_discord(data)
+        time.sleep(300) # Raport co 5 minut
