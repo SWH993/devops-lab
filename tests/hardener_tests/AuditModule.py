@@ -1,13 +1,14 @@
 import os
 import re
 from typing import Dict, Union
+from pathlib import Path
 
 class SSHAuditor:
     """
     Klasa wykonująca audyt bezpieczeństwa usługi SSH.
     """
 
-    CONFIG_PATH = "/etc/ssh/sshd_config"
+    CONFIG_PATH = Path("/etc/ssh/sshd_config")
 
     def __init__(self):
         self.results: Dict[str, Union[str, int, bool]] = {}
@@ -52,13 +53,13 @@ def is_port_secure(port: any) -> bool:
     
 def set_config_value(content: str, key: str, value: str) -> str:
     """Uniwersalna funkcja do ustawiania parametrów w plikach typu 'Klucz Wartość'."""
-    pattern = rf"^{key}\s+\S+"
+    pattern = rf"^[#\s]*{key}\s+.*$"
     new_line = f"{key} {value}"
 
-    if re.search(pattern, content, flags=re.MULTILINE):
-        return re.sub(pattern, new_line, content, flags=re.MULTILINE)
+    if re.search(pattern, content, flags=re.MULTILINE | re.IGNORECASE):
+        return re.sub(pattern, new_line, content, flags=re.MULTILINE | re.IGNORECASE)
     else:
-        return f"{content.strip()}\n{new_line}\n"
+        return f"{content.rstrip()}\n{new_line}\n"
 
 def apply_ssh_fix(new_port: int = 2222):
     path = "/etc/ssh/sshd_config"
@@ -93,7 +94,7 @@ if __name__ == "__main__":
     print(f"Czy '2222' jest bezpieczny? {is_port_secure('2222')}")
 
     stara_konfiguracja = "Port 22\nPermitRootLogin no"
-    nowa_konfiguracja = set_config_value(stara_konfiguracja, 2222)  
+    nowa_konfiguracja = set_config_value(stara_konfiguracja, "Port", "2222")  
 
     print("\n--- TEST NAPRAWY ---")
     print(f"Przed:\n{stara_konfiguracja}")
