@@ -36,4 +36,6 @@ Prosty, ale potężny monitor zasobów systemowych napisany w Pythonie, zaprojek
     Aby skrypt uruchamiał się co 30 minut, dodaj poniższą linię do crontab -e:
     */30 * * * * /sciezka/do/python3 /sciezka/do/Monitor.py
 
+    ![screenshot_discord](image.png)
+
 Projekt stworzony w ramach nauki DevOps i automatyzacji systemów Linux.
