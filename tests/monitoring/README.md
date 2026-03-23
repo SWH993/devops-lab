@@ -1,41 +1,47 @@
-# 🖥️ Proxmox Hardware Monitor (Discord Integration)
+# Proxmox Hardware Monitor (Discord Integration)
 
-Prosty, ale potężny monitor zasobów systemowych napisany w Pythonie, zaprojektowany do działania na serwerach Debian/Proxmox. Automatycznie wysyła status CPU, RAM i Dysku na kanał Discord za pomocą Webhooków.
+A lightweight yet robust system resource monitor authored in Python, specifically optimized for Debian 13 / Proxmox environments. It automates telemetry dispatch (CPU, RAM, Disk, and Battery) to Discord channels via Webhooks.
 
-## 🚀 Funkcje
-* **Real-time Monitoring**: Pobieranie danych o zużyciu procesora, pamięci operacyjnej i dysku za pomocą biblioteki `psutil`.
-* **Discord Alerts**: Profesjonalne powiadomienia typu Embed z kolorami statusu.
-* **DevOps Ready**: Pełna integracja z plikami `.env` (bezpieczeństwo haseł) oraz harmonogramem `cron`.
-* **Clean Code**: Architektura oparta na klasach (Python OOP).
+## Key Capabilities
 
-## 🛠️ Technologie
-* **Język**: Python 3.13 (Debian 13)
-* **Biblioteki**: `psutil`, `requests`, `python-dotenv`
-* **Automatyzacja**: Linux Cron Jobs
-* **Komunikacja**: Discord Webhooks (JSON API)
+    **Real-time Telemetry**: High-precision monitoring of CPU utilization, memory allocation, and storage overhead using the psutil library.
 
-## 📦 Instalacja i Konfiguracja
+    **Discord Embed Notifications**: Professional status reports featuring dynamic color-coding based on resource thresholds.
 
-1. **Sklonuj repozytorium:**
-   git clone [https://github.com/](https://github.com/)[TWOJ_NICK]/devops-lab.git
-   cd devops-lab/tests/monitoring
+    **Security-First Design**: Fully integrated with .env files to prevent credential exposure (Hardcoded Secrets Mitigation).
 
-2. **Zainstaluj zależności:**
-    pip install -r requirements.txt
+    **Scalable Architecture**: Built using Object-Oriented Programming (OOP) principles for maintainability and extensibility.
 
-3. **Skonfiguruj zmienne środowiskowe:**
-    Utwórz plik .env i dodaj swój Webhook:
-    Fragment kodu
+    **Battery Monitoring**: Integrated support for Linux sysfs to monitor UPS/Battery status on mobile Proxmox nodes.
 
-    DISCORD_WEBHOOK_URL=[https://discord.com/api/webhooks/](https://discord.com/api/webhooks/)...
+## Tech Stack
 
-4.  **Uruchom testowo:**
-    python3 Monitor.py
+    **Environment**: Python 3.13 (Debian 13 / Trixie)
 
-**⏰ Automatyzacja (Cron)**
-    Aby skrypt uruchamiał się co 30 minut, dodaj poniższą linię do crontab -e:
-    */30 * * * * /sciezka/do/python3 /sciezka/do/Monitor.py
+    **Core Libraries**: psutil, requests, python-dotenv
 
-    ![screenshot_discord](image.png)
+    **Automation**: Linux Cron Jobs / Systemd Services
 
-Projekt stworzony w ramach nauki DevOps i automatyzacji systemów Linux.
+    **Communication**: Discord Webhook API (JSON payloads)
+
+## Installation & Configuration
+
+    Clone the repository:
+        ```git clone https://github.com/[YOUR_NICK]/devops-lab.git```
+        ```cd devops-lab/tests/monitoring```
+
+    Install dependencies:
+        ```pip install -r requirements.txt```
+
+    Configure environment variables:
+    Create a .env file and define your Webhook URL:
+        ```DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...```
+
+    Manual Execution:
+        ```python3 Monitor.py```
+
+## Scheduling (Cron)
+    To automate the report dispatch every 30 minutes, append the following entry to your crontab -e:
+        ```*/30 * * * * /usr/bin/python3 /absolute/path/to/Monitor.py```
+
+This project was developed as part of a comprehensive DevOps & Linux Automation learning path, focusing on system reliability and infrastructure monitoring.

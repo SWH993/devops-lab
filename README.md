@@ -1,56 +1,56 @@
 # DevOps Lab Automation - Proxmox Control
 
-Projekt automatyzacji domowego laboratorium opartego na systemie **Proxmox** oraz **Debian 13**. Skrypt pozwala na zdalne zarządzanie zasilaniem serwera głównego oraz przygotowuje grunt pod automatyczny pipeline postów na Instagram.
+comprehensive automation suite designed for a home-lab environment running on **Proxmox VE** and **Debian 13 (Trixie)**. This project enables remote power management and establishes the foundation for an automated Instagram content pipeline.
 
-## 🚀 Funkcjonalności
-- **Wake on LAN (WoL):** Skrypt Python do zdalnego budzenia serwera za pomocą pakietów Magic Packet.
-- **SSH Remote Shutdown:** Bezpieczne wyłączanie serwera poprzez protokół SSH.
-- **Security First:** Pełna integracja z plikami `.env` w celu ochrony haseł i adresów MAC (pliki te są ignorowane przez Git).
-- **Python venv:** Wykorzystanie wirtualnych środowisk dla zachowania czystości systemu Debian 13.
-- **SSH Security Auditor:** Autorski moduł w Pythonie wykonujący audyt bezpieczeństwa plików konfiguracyjnych SSH (port, logowanie roota, autoryzacja hasłem).
-- **Auto-Fixing Engine:** Inteligentna funkcja modyfikacji plików systemowych (`/etc/ssh/sshd_config`) z wykorzystaniem zaawansowanych wyrażeń regularnych (Regex).
-- **Safe Port Validation:** Logika walidująca bezpieczeństwo portów (zakres 1024-65535) z obsługą błędów typu `try-except`.
-- **Modular Architecture:** Kod podzielony na klasy (`SSHAuditor`) i uniwersalne funkcje pomocnicze, gotowy do importowania w większych systemach.
+## Key Capabilities
+- **Wake on LAN (WoL):** Python-based utility to trigger remote boot sequences via Magic Packets.
+- **SSH Remote Shutdown:** Orchestrated graceful shutdown/hibernation via the SSH protocol.
+- **Security First:** Full integration with `.env` variables to safeguard credentials and hardware addresses (all secrets are git-ignored).
+- **Python venv Isolation:** Deployment within virtual environments to maintain the integrity of the Debian 13 host system.
+- **SSH Security Auditor:** An automated module that performs deep-scan audits of SSH configurations (port analysis, root login policies, and authentication methods).
+- **Auto-Fixing Engine:** Intelligent system file modification `(/etc/ssh/sshd_config)` leveraging advanced Regular Expressions (Regex).
+- **Safe Port Validation:** Logic-based security checks for non-standard port ranges (1024-65535) with integrated exception handling.
+- **Modular Architecture:** Fully decoupled, Object-Oriented design (`SSHAuditor` class) ready for integration into larger infrastructure frameworks.
 
-## 🛠️ Technologie
+## Tech Stack
 - **Python 3.11+**
 - **Libraries:** `paramiko`, `python-dotenv`, `wakeonlan`, `psutil`, `requests`
 - **OS:** Debian 13 (Trixie)
 - **Infrastructure:** Proxmox VE
 
-## 📋 Instalacja i konfiguracja
+## Installation & Configuration
 
-1. **Klonowanie repozytorium:**
-    git clone git@github.com:TWOJ_NICK/devops-lab.git
-    cd devops-lab
+1. **Clone the repository:**
+    ```git clone git@github.com:YOUR_NICK/devops-lab.git
+    cd devops-lab```
 
-2. **Przygotowanie środowiska:**
-    python3 -m venv venv
+2. **Environment Initialization:**
+    ```python3 -m venv venv
     source venv/bin/activate
-    pip install -r requirements.txt
+    pip install -r requirements.txt```
 
-    **Konfiguracja zmiennych:**
-    Utwórz plik .env i uzupełnij dane:
-        PM_API_URL=https://<IP_PROXMOXA>:8006/api2/json
+    **Credential Setup:**
+    Create a .env file in the root directory and populate it with your environment details:
+        ```PM_API_URL=https://<IP_PROXMOXA>:8006/api2/json
         PM_USER=root@pam
         PM_PASS=twoje_haslo
-        SRV_MAC=AA:BB:CC:DD:EE:FF
+        SRV_MAC=AA:BB:CC:DD:EE:FF```
 
-3. **Uprawnienia systemowe:**
-    Niektóre moduły (np. AuditModule) wymagają uprawnień administratora do odczytu/zapisu plików systemowych:
-        sudo venv/bin/python AuditModule.py
+3. **System Permissions:**
+    Note: Certain modules (e.g., AuditModule.py) require elevated privileges (sudo) to access and modify protected system files:
+        ```sudo venv/bin/python AuditModule.py```
 
-🕹️ **Użycie**
-    * Włączanie serwera: python3 wol_start.py
-    * Wyłączanie serwera: python3 srv_off.py
-    * Audyt/Hardening SSH: sudo ./venv/bin/python AuditModule.py
+    **Usage Guide**
+    * Initiate Boot (WoL): `python3 wol_start.py`
+    * Remote Shutdown: `python3 srv_off.py`
+    * Security Audit/Hardening: `sudo ./venv/bin/python AuditModule.py`
 
-📅 **Plan rozwoju (Roadmap)**
+📅 **Development Roadmap**
 
-    [x] SSH Hardening: Automatyczna zmiana portu i blokada logowania na roota.
+    [x] **SSH Hardening**: Automated port migration and root login restriction.
 
-    [ ] Battery & Resource Monitor: Skrypt wysyłający stan baterii laptopa i zużycie zasobów Proxmoxa na Discorda (Webhook).
+    [x] **Battery & Resource Monitor**: Battery & Resource monitoring script with Discord Webhook integration.
 
-    [ ] Proxmox Network Isolation: Izolacja maszyn wirtualnych od sieci lokalnej (VLAN/Bridge/Firewall).
+    [x] **Proxmox Network Isolation**: Implementing VLAN/Bridge/Firewall rules for VM segmenting.
 
-    [ ] Instagram Pipeline: Automatyzacja treści (Shorts/Posts) przy użyciu Pythona.
+    [ ] **Instagram Pipeline**: Content automation (Shorts/Posts) leveraging Python's media libraries.
