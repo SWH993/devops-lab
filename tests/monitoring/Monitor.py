@@ -3,108 +3,143 @@ import os
 import time
 import requests
 from dotenv import load_dotenv
-from typing import Dict
+from typing import Dict, Any
+
 
 class Monitor:
-    """Klasa wyciągająca dane o CPU, RAM, Dysku i Baterii z hosta Proxmox."""
-    
+    """
+    A telemetry class responsible for extracting resource utilization metrics
+    (CPU, RAM, Disk, and Battery) from a Proxmox host.
+    """
+
     def __init__(self):
         load_dotenv()
-        self.webhook_url = os.getenv('DISCORD_WEBHOOK_URL')
+        self.webhook_url = os.getenv("DISCORD_WEBHOOK_URL")
         if not self.webhook_url:
-            print("⚠️ BŁĄD: Brak DISCORD_WEBHOOK_URL w pliku .env")
+            print(
+                "⚠️ CONFIGURATION ERROR: DISCORD_WEBHOOK_URL not found in environment variables."
+            )
 
-    def get_cpu(self) -> float:
+    def get_cpu_utilization(self) -> float:
+        """Returns the current CPU usage percentage."""
         return psutil.cpu_percent(interval=1)
 
-    def get_ram(self) -> float:
+    def get_memory_utilization(self) -> float:
+        """Returns the percentage of utilized virtual memory."""
         return psutil.virtual_memory().percent
 
-    def get_disc(self) -> float:
-        return psutil.disk_usage('/').percent
-    
-    def get_battery(self) -> Dict[str, str]:
-        """Pobiera dane o baterii z systemu plików Linuxa."""
+    def get_disk_utilization(self) -> float:
+        """Returns the disk space usage percentage for the root directory."""
+        return psutil.disk_usage("/").percent
+
+    def get_battery_telemetry(self) -> Dict[str, str]:
+        """
+        Retrieves battery capacity and status directly from the Linux sysfs interface.
+        Supports both BAT0 and BAT1 interfaces.
+        """
         try:
-            cap_path = "/sys/class/power_supply/BAT0/capacity"
-            stat_path = "/sys/class/power_supply/BAT0/status"
+            # Standard Linux sysfs paths for power supply monitoring
+            base_path = "/sys/class/power_supply/BAT0"
+            if not os.path.exists(base_path):
+                base_path = base_path.replace("BAT0", "BAT1")
 
-            # Sprawdzenie czy bateria to BAT0 czy BAT1
+            cap_path = f"{base_path}/capacity"
+            stat_path = f"{base_path}/status"
+
             if not os.path.exists(cap_path):
-                cap_path = cap_path.replace("BAT0", "BAT1")
-                stat_path = stat_path.replace("BAT0", "BAT1")
+                return {"capacity": "N/A", "status": "Not Detected"}
 
-            if not os.path.exists(cap_path):
-                return {"capacity": "N/A", "status": "Nie wykryto"}
-
-            with open(cap_path, 'r') as f:
+            with open(cap_path, "r") as f:
                 capacity = f.read().strip()
-            with open(stat_path, 'r') as f:
+            with open(stat_path, "r") as f:
                 status = f.read().strip()
 
             return {"capacity": capacity, "status": status}
-        except Exception:
-            return {"capacity": "N/A", "status": "Błąd odczytu"}
+        except Exception as e:
+            return {"capacity": "N/A", "status": f"Read Error: {e}"}
 
-    def get_stats(self) -> dict:
-        """Zbiera wszystkie statystyki w jeden słownik."""
+    def collect_metrics(self) -> Dict[str, Any]:
+        """Aggregates all system metrics into a single telemetry payload."""
         return {
-            "cpu": self.get_cpu(),
-            "ram": self.get_ram(),
-            "disc": self.get_disc(),
-            "battery": self.get_battery()
+            "cpu": self.get_cpu_utilization(),
+            "ram": self.get_memory_utilization(),
+            "disk": self.get_disk_utilization(),
+            "battery": self.get_battery_telemetry(),
         }
-    
-    def send_to_discord(self, stats: dict):
-        """Formatuje dane i wysyła je na Webhook Discorda."""
+
+    def dispatch_to_discord(self, metrics: Dict[str, Any]):
+        """
+        Formats the collected telemetry data and dispatches it via a Discord Webhook.
+        Implements dynamic color-coding based on critical thresholds.
+        """
         if not self.webhook_url:
             return
-        
-        # Bezpieczne pobieranie danych o baterii
-        battery = stats.get('battery', {"capacity": "N/A", "status": "Unknown"})
-        bat_cap = battery.get('capacity', "N/A")
-        bat_status = battery.get('status', "Unknown")
 
-        # Logika koloru (Czerwony jeśli bateria < 20%)
+        battery = metrics.get("battery", {})
+        bat_cap = battery.get("capacity", "N/A")
+        bat_status = battery.get("status", "Unknown")
+
+        # Threshold-based color logic (Red if capacity < 20%)
         try:
             is_low = bat_cap != "N/A" and int(bat_cap) < 20
         except ValueError:
             is_low = False
-        
-        color = 15158332 if is_low else 3066993
+
+        # Hex colors: Green (3066993) or Red (15158332)
+        embed_color = 15158332 if is_low else 3066993
 
         payload = {
-            "embeds": [{
-                "title": "🖥️ Statystyki Serwera HP - Proxmox",
-                "description": "Regularny raport stanu zasobów systemowych hosta.",
-                "color": color,
-                "fields": [
-                    {"name": "🔥 Procesor", "value": f"**{stats['cpu']}%**", "inline": True},
-                    {"name": "🧠 Pamięć RAM", "value": f"**{stats['ram']}%**", "inline": True},
-                    {"name": "💾 Dysk systemowy", "value": f"**{stats['disc']}%**", "inline": True},
-                    {
-                        "name": "⚡ Bateria", 
-                        "value": f"**{bat_cap}%** ({bat_status})", 
-                        "inline": False
-                    }
-                ],
-                "footer": {
-                    "text": f"Monitorowanie aktywne • Debian 13 • {time.strftime('%H:%M:%S')}"
+            "embeds": [
+                {
+                    "title": "🖥️ HP Server Metrics - Proxmox Host",
+                    "description": "Scheduled system resource utilization report.",
+                    "color": embed_color,
+                    "fields": [
+                        {
+                            "name": "🔥 CPU Usage",
+                            "value": f"**{metrics['cpu']}%**",
+                            "inline": True,
+                        },
+                        {
+                            "name": "🧠 RAM Usage",
+                            "value": f"**{metrics['ram']}%**",
+                            "inline": True,
+                        },
+                        {
+                            "name": "💾 System Disk",
+                            "value": f"**{metrics['disk']}%**",
+                            "inline": True,
+                        },
+                        {
+                            "name": "⚡ Battery Status",
+                            "value": f"**{bat_cap}%** ({bat_status})",
+                            "inline": False,
+                        },
+                    ],
+                    "footer": {
+                        "text": f"Monitoring Active • Debian 13 • {time.strftime('%H:%M:%S')}"
+                    },
                 }
-            }]
+            ]
         }
 
         try:
-            res = requests.post(self.webhook_url, json=payload, timeout=10)
-            print(f"[{time.strftime('%H:%M:%S')}] Status wysyłki: {res.status_code}")
-        except Exception as e:
-            print(f"❌ Błąd sieci: {e}")
-    
+            response = requests.post(self.webhook_url, json=payload, timeout=15)
+            print(
+                f"[{time.strftime('%H:%M:%S')}] Dispatch Status: {response.status_code}"
+            )
+        except requests.exceptions.RequestException as e:
+            print(f"❌ Network Exception: {e}")
+
+
 if __name__ == "__main__":
-    app = Monitor()
-    print("🚀 Monitoring uruchomiony. Raporty co 5 minut...")
-    
-    while True:
-        current_data = app.get_stats()
-        app.send_to_discord(current_data)
-        time.sleep(300) # 5 minut przerwy
+    monitor = Monitor()
+    print("🚀 Monitoring Agent initialized. Dispatching reports every 5 minutes...")
+
+    try:
+        while True:
+            telemetry_data = monitor.collect_metrics()
+            monitor.dispatch_to_discord(telemetry_data)
+            time.sleep(300)  # 5-minute polling interval
+    except KeyboardInterrupt:
+        print("\n🛑 Monitoring Agent terminated by user.")

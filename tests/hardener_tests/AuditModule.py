@@ -3,106 +3,134 @@ import re
 from typing import Dict, Union
 from pathlib import Path
 
+
 class SSHAuditor:
     """
-    Klasa wykonująca audyt bezpieczeństwa usługi SSH.
+    Performs a security audit of the SSH service configuration
+    to ensure compliance with system hardening standards.
     """
 
+    # Using Path objects for better cross-platform compatibility
     CONFIG_PATH = Path("/etc/ssh/sshd_config")
 
     def __init__(self):
-        self.results: Dict[str, Union[str, int, bool]] = {}
+        self.audit_results: Dict[str, Union[str, int, bool]] = {}
 
-    def run_audit(self) -> Dict[str, Union[str, int, bool]]:
-        """uruchamia wszytskie testy audytowe"""
-        if not os.path.exists(self.CONFIG_PATH):
-            return {"error": "Brak pliku konfiguracji SSH"}
+    def execute_audit(self) -> Dict[str, Union[str, int, bool]]:
+        """Orchestrates all security checks on the SSH configuration file."""
+        if not self.CONFIG_PATH.exists():
+            return {"error": "SSH configuration file not found (FileNotFoundError)"}
 
-        with open(self.CONFIG_PATH, 'r') as f:
-            content = f.read()
+        try:
+            with open(self.CONFIG_PATH, "r") as f:
+                content = f.read()
 
-        self.results['port'] = self._check_port(content)
-        self.results['is_port_safe'] = is_port_secure(self.results['port'])
-        self.results['root_login'] = self._check_root_login(content)
-        self.results['password_auth'] = self._check_password_auth(content)
-        
-        return self.results
+            # Populating results dictionary with telemetry data
+            self.audit_results["current_port"] = self._parse_port(content)
+            self.audit_results["port_security_status"] = validate_port_security(
+                self.audit_results["current_port"]
+            )
+            self.audit_results["root_login_allowed"] = self._check_root_login_policy(
+                content
+            )
+            self.audit_results["password_auth_enabled"] = (
+                self._check_password_authentication_policy(content)
+            )
 
-    def _check_port(self, content: str) -> int:
-        """Wyciąga numer portu"""
+            return self.audit_results
+        except PermissionError:
+            return {
+                "error": "Insufficient permissions to read SSH config. Run as root/sudo."
+            }
+
+    def _parse_port(self, content: str) -> int:
+        """Extracts the configured SSH port using regex."""
         match = re.search(r"^Port\s+(\d+)", content, re.MULTILINE)
         return int(match.group(1)) if match else 22
 
-    def _check_root_login(self, content: str) -> bool:
-        """Sprawdza, czy PermitRootLogin jest ustawione na 'yes'."""
-        match = re.search(r"^PermitRootLogin\s+yes", content, re.MULTILINE)
-        return True if match else False
+    def _check_root_login_policy(self, content: str) -> bool:
+        """Evaluates if the 'PermitRootLogin' policy is set to 'yes'."""
+        match = re.search(
+            r"^PermitRootLogin\s+yes", content, re.MULTILINE | re.IGNORECASE
+        )
+        return bool(match)
 
-    def _check_password_auth(self, content: str) -> bool:
-        """Sprawdza, czy PasswordAuthentication jest włączone."""
-        match = re.search(r"^PasswordAuthentication\s+yes", content, re.MULTILINE)
-        return True if match else False
+    def _check_password_authentication_policy(self, content: str) -> bool:
+        """Evaluates if password-based authentication is explicitly enabled."""
+        match = re.search(
+            r"^PasswordAuthentication\s+yes", content, re.MULTILINE | re.IGNORECASE
+        )
+        return bool(match)
 
-def is_port_secure(port: any) -> bool:
-    """Sprawdza, czy podany port SSH jest poprawny i bezpieczny."""
+
+def validate_port_security(port: Union[str, int]) -> bool:
+    """Validates if the provided SSH port falls within the recommended non-privileged range."""
     try:
         port_num = int(port)
-        return 1024 < port_num < 65535
+        # Security best practice: Move SSH to a non-standard, non-privileged port (>1024)
+        return 1024 < port_num <= 65535
     except (ValueError, TypeError):
         return False
-    
-def set_config_value(content: str, key: str, value: str) -> str:
-    """Uniwersalna funkcja do ustawiania parametrów w plikach typu 'Klucz Wartość'."""
+
+
+def modify_config_parameter(content: str, key: str, value: str) -> str:
+    """Updates or appends a configuration parameter (Key-Value pair) in a string buffer."""
     pattern = rf"^[#\s]*{key}\s+.*$"
-    new_line = f"{key} {value}"
+    new_entry = f"{key} {value}"
 
     if re.search(pattern, content, flags=re.MULTILINE | re.IGNORECASE):
-        return re.sub(pattern, new_line, content, flags=re.MULTILINE | re.IGNORECASE)
+        return re.sub(pattern, new_entry, content, flags=re.MULTILINE | re.IGNORECASE)
     else:
-        return f"{content.rstrip()}\n{new_line}\n"
+        # Ensuring the file ends with a newline before appending
+        return f"{content.rstrip()}\n{new_entry}\n"
 
-def apply_ssh_fix(new_port: int = 2222):
+
+def apply_security_remediation(target_port: int = 2222):
+    """
+    Applies security fixes to the SSH configuration.
+    Requires elevated privileges (sudo/root).
+    """
     path = "/etc/ssh/sshd_config"
 
-    #Odczyt
-    with open(path, 'r') as f:
-        content = f.read()
-
-    #Modyfikacja
-    updated_content = set_config_value(content, "Port", str(new_port))
-    updated_content = set_config_value(updated_content, "PermitRootLogin", "no")
-
-    #Zapis (wymaga uprawnień sudo/root)
     try:
-        with open(path, 'w') as f:
-            f.write(updated_content)
-        print("Sukces: Plik konfiguracyjny zaktualizowany.")
-    except PermissionError:
-        print("BŁĄD: Brak uprawnień do edycji. Uruchom plik przez sudo.")
+        with open(path, "r") as f:
+            content = f.read()
 
-# --- Uruchomienie ---
+        # Remediation steps: Change port and disable root login
+        updated_content = modify_config_parameter(content, "Port", str(target_port))
+        updated_content = modify_config_parameter(
+            updated_content, "PermitRootLogin", "no"
+        )
+
+        with open(path, "w") as f:
+            f.write(updated_content)
+        print("Success: Security remediation applied successfully.")
+
+    except PermissionError:
+        print("CRITICAL ERROR: Permission denied. Please re-run the script with sudo.")
+    except Exception as e:
+        print(f"Unexpected error during remediation: {e}")
+
+
 if __name__ == "__main__":
     auditor = SSHAuditor()
-    raport = auditor.run_audit()
+    report = auditor.execute_audit()
 
-    # Raport
-    print("--- RAPORT BEZPIECZEŃSTWA SSH ---")
-    for klucz, wartosc in raport.items():
-        print(f"{klucz.upper()}: {wartosc}")
-
-    print("\n--- TEST WALIDACJI PORTÓW ---")
-    print(f"Czy '2222' jest bezpieczny? {is_port_secure('2222')}")
-
-    stara_konfiguracja = "Port 22\nPermitRootLogin no"
-    nowa_konfiguracja = set_config_value(stara_konfiguracja, "Port", "2222")  
-
-    print("\n--- TEST NAPRAWY ---")
-    print(f"Przed:\n{stara_konfiguracja}")
-    print(f"Po:\n{nowa_konfiguracja}")
-
-    # Decyzja
-    decyzja = input("\nCzy chcesz automatycznie naprawić ustawienia SSH? (y/n): ")
-    if decyzja.lower() == 'y':
-        apply_ssh_fix(new_port=2222)
+    if "error" in report:
+        print(f"Audit Failed: {report['error']}")
     else:
-        print("Anulowano. Zmiany nie zostały wprowadzone.")
+        print("--- SSH SECURITY AUDIT REPORT ---")
+        for key, value in report.items():
+            print(f"{key.replace('_', ' ').upper()}: {value}")
+
+    print("\n--- PORT VALIDATION TEST ---")
+    print(f"Is port '2222' secure? {validate_port_security(2222)}")
+
+    # Decision Logic
+    user_input = input(
+        "\nWould you like to apply security hardening automatically? (y/n): "
+    )
+    if user_input.lower() == "y":
+        apply_security_remediation(target_port=2222)
+    else:
+        print("Operation aborted. No changes were made to the system.")

@@ -1,9 +1,10 @@
-# Hasła i klucze
+# Passwords and keys
 .env
 
-# Środowisko wirtualne (nie wysyłamy całego folderu venv)
+# Virtual environment
 venv/
 __pycache__/
 
-# Pliki systemowe
+# System files
 .DS_Store
+settings.json
