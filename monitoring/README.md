@@ -28,7 +28,7 @@ A lightweight yet robust system resource monitor authored in Python, specificall
 
     Clone the repository:
         ```git clone https://github.com/[YOUR_NICK]/devops-lab.git```
-        ```cd devops-lab/tests/monitoring```
+        ```cd devops-lab/monitoring```
 
     Install dependencies:
         ```pip install -r requirements.txt```
