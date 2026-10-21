@@ -5,7 +5,6 @@
 # Virtual environment
 venv/
 __pycache__/
-.test/
 
 # System files
 .DS_Store
